@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paris — Solo Days · Aug 11–16</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --ink:#1f2a2e; --ink-soft:#3c4a4f; --cream:#f6f1e7; --cream-2:#efe7d6;
+    --paper:#fbf8f1; --brass:#b08a3e; --brass-2:#caa75e; --teal:#1f6f6b;
+    --rose:#9c5b53; --line:#ddd2bd; --muted:#8a8170;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--cream); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; line-height:1.55;}
+  a{color:var(--teal); text-decoration:none; border-bottom:1px solid rgba(31,111,107,.3);}
+  a:hover{border-bottom-color:var(--teal);}
+
+  header.masthead{background:var(--ink); color:var(--cream); padding:34px 24px 26px; text-align:center; border-bottom:4px solid var(--brass);}
+  .masthead .eyebrow{letter-spacing:.34em; text-transform:uppercase; font-size:12px; color:var(--brass-2); font-family:Helvetica,Arial,sans-serif;}
+  .masthead h1{margin:.25em 0 .15em; font-size:38px; font-weight:600; letter-spacing:.02em;}
+  .masthead .sub{color:#cfd6d3; font-size:15px;}
+  .masthead .party{margin-top:10px; font-size:13px; color:#aeb8b4; font-family:Helvetica,Arial,sans-serif;}
+
+  nav.daynav{position:sticky; top:0; z-index:1000; background:var(--paper); border-bottom:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:10px 12px; box-shadow:0 2px 10px rgba(0,0,0,.05);}
+  nav.daynav a{font-family:Helvetica,Arial,sans-serif; font-size:12.5px; letter-spacing:.04em; color:var(--ink-soft);
+    border:1px solid var(--line); border-radius:999px; padding:6px 13px; background:#fff;}
+  nav.daynav a:hover{background:var(--ink); color:var(--cream); border-color:var(--ink);}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px;}
+
+  .intro{background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px 20px; margin:20px 0 4px; font-size:14px; color:var(--ink-soft);}
+  .intro b{font-family:Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass);}
+
+  .legend{display:flex; flex-wrap:wrap; gap:14px; justify-content:center; padding:16px 12px 4px; font-family:Helvetica,Arial,sans-serif; font-size:12px; color:var(--ink-soft);}
+  .legend .tag{display:inline-flex; align-items:center; gap:6px;}
+  .pill{display:inline-block; font-family:Helvetica,Arial,sans-serif; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; color:#fff; white-space:nowrap;}
+  .pill.flex{background:var(--teal);}
+  .pill.book{background:var(--rose);}
+  .pill.optional{background:#a59b86;}
+  .pill.fixed{background:var(--brass);}
+
+  section.day{padding:30px 0 10px; border-top:1px solid var(--line); margin-top:18px;}
+  .day-head{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:4px;}
+  .day-head .num{font-family:Helvetica,Arial,sans-serif; font-size:12px; letter-spacing:.2em; color:var(--brass); text-transform:uppercase;}
+  .day-head h2{margin:0; font-size:27px; font-weight:600;}
+  .day-head .dow{color:var(--muted); font-size:16px;}
+  .day-summary{color:var(--ink-soft); font-size:15px; margin:2px 0 20px; font-style:italic;}
+
+  .day-grid{display:grid; grid-template-columns:1fr 360px; gap:22px; align-items:start;}
+  .day-map{position:sticky; top:64px;}
+  .lmap{height:560px; border-radius:12px; border:1px solid var(--line); overflow:hidden; background:#e8e4d8;}
+  .maphint{font-family:Helvetica,Arial,sans-serif; font-size:11px; color:var(--muted); text-align:center; margin-top:7px;}
+  .leaflet-popup-content{font-family:Helvetica,Arial,sans-serif; font-size:12.5px;}
+
+  .block{margin:0 0 16px; background:var(--paper); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .block-head{display:flex; align-items:center; gap:10px; padding:11px 18px; background:var(--cream-2); border-bottom:1px solid var(--line);}
+  .block-head .pod{font-family:Helvetica,Arial,sans-serif; font-size:12px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--ink);}
+  .block-head .pod .clock{color:var(--muted); font-weight:400; letter-spacing:.04em; margin-left:6px;}
+
+  .item{display:grid; grid-template-columns:120px 1fr; gap:16px; padding:16px; border-bottom:1px dashed var(--line);}
+  .item:last-child{border-bottom:none;}
+  .item .media{position:relative; height:96px; border-radius:9px; overflow:hidden; background:#ddd; border:1px solid var(--line);}
+  .item .media .ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; padding:8px;}
+  .item .media .ph .glyph{font-size:26px; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
+  .item .media .ph .lbl{font-family:Helvetica,Arial,sans-serif; font-size:9.5px; letter-spacing:.05em; margin-top:6px; opacity:.92;}
+  .g-glass{background:linear-gradient(135deg,#1f6f6b,#0e3b3a);}
+  .g-doge{background:linear-gradient(135deg,#7a5a8c,#3a2747);}
+  .g-row{background:linear-gradient(135deg,#2f7fae,#163a52);}
+  .g-ghetto{background:linear-gradient(135deg,#9c7b3e,#4a3818);}
+  .g-mask{background:linear-gradient(135deg,#b0563f,#5a2419);}
+  .g-boat{background:linear-gradient(135deg,#3a7e7a,#16332f);}
+  .g-dine{background:linear-gradient(135deg,#a07b4e,#4a3320);}
+  .g-walk{background:linear-gradient(135deg,#6f7d6a,#33402f);}
+
+  .item .body h3{margin:0 0 5px; font-size:17px; font-weight:600;}
+  .item .body .meta{font-family:Helvetica,Arial,sans-serif; font-size:12px; color:var(--muted); margin:0 0 8px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center;}
+  .item .body p{margin:0 0 8px; font-size:14px; color:var(--ink-soft);}
+  .item .body .line{font-size:13px; margin:5px 0 0;}
+  .item .body .line b{font-family:Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); margin-right:6px;}
+  .eat{background:#fff; border:1px solid var(--line); border-left:3px solid var(--teal); border-radius:6px; padding:9px 12px; margin:0 0 16px; font-size:13px;}
+  .eat b{font-family:Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--teal);}
+  .eat.dinner{border-left-color:var(--rose);}
+  .eat.dinner b{color:var(--rose);}
+
+  footer{text-align:center; padding:26px 20px 40px; color:var(--muted); font-size:12.5px; font-family:Helvetica,Arial,sans-serif;}
+  .updated{font-style:italic;}
+
+  @media(max-width:900px){
+    .day-grid{grid-template-columns:1fr;}
+    .day-map{position:static;}
+    .lmap{height:320px;}
+  }
+  @media(max-width:640px){ .item{grid-template-columns:1fr;} .item .media{height:150px;} .masthead h1{font-size:30px;} }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="eyebrow">Paris · Solo · August 2026</div>
+  <h1>Paris — Solo Days</h1>
+  <div class="sub">Park Hyatt Paris-Vendôme · Aug 11–16</div>
+  <div class="party">Mims · design sourcing for the apartment</div>
+</header>
+
+<nav class="daynav">
+  <a href="#tue">Tue 11 · Palais-Royal</a>
+  <a href="#wed">Wed 12 · Left Bank</a>
+  <a href="#thu">Thu 13 · Montmartre + 1st/2nd</a>
+  <a href="#fri">Fri 14 · East side</a>
+  <a href="#sat">Sat 15 · The Puces</a>
+  <a href="#flex">Culture &amp; the 8th</a>
+</nav>
+
+<div class="wrap">
+
+  <div class="intro">
+    <b>How to read this</b> &nbsp;Everything here is walk-in, browsable, and priced — no appointments, no white-glove galleries where you're the only one in the room. Days mix design, fashion, jewelry, and trims so nothing is single-minded. Rugs are French/Deco only (the Puces is the place). <b style="margin-left:8px;">August note</b> &nbsp;Mid-August is <em>fermeture annuelle</em> season — department stores, the Puces, concept stores, and mercerie stay open; a few smaller shops may be shut, so a quick call ahead never hurts. Aug 15 is a Saturday holiday (the Puces run anyway).
+  </div>
+
+  <div class="legend">
+    <span class="tag"><span class="pill flex">Pop-in / no booking</span></span>
+    <span class="tag"><span class="pill book">Order + ship</span></span>
+    <span class="tag"><span class="pill optional">Optional / flex</span></span>
+  </div>
+
+  <!-- ============ TUE ============ -->
+  <section class="day" id="tue">
+    <div class="day-head"><span class="num">Solo begins</span><h2>August 11</h2><span class="dow">Tuesday · evening, around the hotel</span></div>
+    <p class="day-summary">Sara &amp; Etta head to the airport ~5pm; emerge into your own Paris with an easy Palais-Royal wander before dinner.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Late afternoon &amp; evening</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://papierroyal.com/cdn/shop/files/20260504_MATTEOVERZINI_RAMDANETOUHAMI_PAPIERROYAL_00457.webp" alt="Papier Royal"></div>
+            <div class="body">
+              <h3>Papier Royal — the engraver</h3>
+              <div class="meta"><span class="pill book">Order + ship</span><span>Palais-Royal, 1st</span><span>Tue–Sat 11–7</span></div>
+              <p>The last engraver in Paris still pendulum-stamping, tucked in the Palais-Royal arcade — watch business cards made in front of you. Order monogrammed cards/letterhead to ship home (custom takes time), and buy the ready notebooks and envelopes on the spot.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Papier%20Royal%20146%20Galerie%20de%20Valois%20Paris" target="_blank">146 Galerie de Valois</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.parisperfect.com/blog/wp-content/uploads/2017/01/HW-astier-vilatte-blog-1-1024x645.jpg" alt="Astier de Villatte"></div>
+            <div class="body">
+              <h3>Astier de Villatte</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>rue Saint-Honoré, 1st</span></div>
+              <p>The black-clay ceramics and candles, in a beautiful old shop — easy to drift through, accessible price points among the pieces.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Astier%20de%20Villatte%20173%20rue%20Saint-Honor%C3%A9%20Paris" target="_blank">173 rue Saint-Honoré</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Galerie_Vero-Dodat%2C_16_May_2013.jpg/1024px-Galerie_Vero-Dodat%2C_16_May_2013.jpg" alt="Galerie Véro-Dodat"></div>
+            <div class="body">
+              <h3>Galerie du Passage — Pierre Passebon</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>Galerie Véro-Dodat, 1st</span></div>
+              <p>A curiosities-and-20th-century-design gallery in an 1826 glass arcade — quirky, mixed, browsable, and the arcade itself is a jewel.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Galerie%20du%20Passage%20V%C3%A9ro-Dodat%20Paris" target="_blank">Galerie Véro-Dodat</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat dinner"><b>Dinner · vibey, near the hotel</b> &nbsp;<strong>Willi's Wine Bar</strong> (13 rue des Petits-Champs) or <strong>Juveniles</strong> (47 rue de Richelieu) — counter-friendly, made for eating alone, good bottles.</div>
+      </div>
+      <aside class="day-map"><div id="mapTue" class="lmap"></div><div class="maphint">Tap a card's Map link for the exact address.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ WED ============ -->
+  <section class="day" id="wed">
+    <div class="day-head"><span class="num">Day 1</span><h2>August 12</h2><span class="dow">Wednesday · Left Bank</span></div>
+    <p class="day-summary">Curiosities, hardware, antiquaires, and the great Left Bank department store — a design day that stays browsable.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Rue du Bac &amp; Saint-Germain</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Deyrolle%2C_46_Rue_du_Bac%2C_75007_Paris_2013.jpg/1024px-Deyrolle%2C_46_Rue_du_Bac%2C_75007_Paris_2013.jpg" alt="Deyrolle"></div>
+            <div class="body">
+              <h3>Deyrolle</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>46 rue du Bac, 7th</span></div>
+              <p>The 1831 cabinet of curiosities — taxidermy, minerals, butterflies, and the reissued 19th-c natural-history prints you can actually buy and frame. Pure inspiration, no pressure.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Deyrolle%2046%20rue%20du%20Bac%20Paris" target="_blank">46 rue du Bac</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.laquincaillerie.com/wp-content/uploads/2026/01/Blog-Boutique-La-Quincaillerie-15-boulevard-Saint-Germain-Paris.png" alt="La Quincaillerie"></div>
+            <div class="body">
+              <h3>La Quincaillerie</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>Bd Saint-Germain, 5th</span></div>
+              <p>The decorative-hardware destination: knobs, pulls, handles, hooks — including pieces cast from Gio Ponti, Jean Nouvel and Jasper Morrison molds. Genuinely useful for the apartment; all priced, dig freely.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=La%20Quincaillerie%20Boulevard%20Saint-Germain%20Paris" target="_blank">3–15 Bd Saint-Germain</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/41_rue_de_Seine.jpg/1024px-41_rue_de_Seine.jpg" alt="Rue de Seine"></div>
+            <div class="body">
+              <h3>Rue de Seine windows &amp; the Carré Rive Gauche</h3>
+              <div class="meta"><span class="pill optional">Stroll</span><span>6th / 7th</span></div>
+              <p>Walk the collectible-design and antiquaire windows (rue de Seine, rue de Lille, rue de Beaune) for inspiration — peek in, no obligation to engage. <strong>Preclothed</strong> (3 rue Bonaparte) is the browsable vintage-fashion stop here.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=rue%20de%20Seine%20Paris%206e" target="_blank">rue de Seine</a> · <a href="https://www.google.com/maps/search/?api=1&query=Carr%C3%A9%20Rive%20Gauche%20Paris" target="_blank">Carré Rive Gauche</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Bon_March%C3%A9%2C_Paris_-_interior_view.JPG/1024px-Bon_March%C3%A9%2C_Paris_-_interior_view.JPG" alt="Le Bon Marché"></div>
+            <div class="body">
+              <h3>Le Bon Marché <span style="font-weight:400;color:var(--muted);font-size:14px;">(the solo grand-magasin)</span></h3>
+              <div class="meta"><span class="pill flex">Open in August</span><span>24 rue de Sèvres, 7th</span></div>
+              <p>If you don't finish the department stores with Sara, do the Left Bank one solo here — home floor, La Grande Épicerie next door, and the calmest of the grands magasins.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Le%20Bon%20March%C3%A9%2024%20rue%20de%20S%C3%A8vres%20Paris" target="_blank">24 rue de Sèvres</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat"><b>Lunch · salad + good bread</b> &nbsp;<strong>Cuisine de Bar by Poilâne</strong> (38 rue du Cherche-Midi) — tartines and salads on the legendary Poilâne bread; or <strong>Le Bar du Marché</strong> (rue de Seine/Buci) — buzzy café that does a proper salade niçoise.</div>
+        <div class="eat dinner"><b>Dinner · fish, convivial</b> &nbsp;<strong>La Boissonnerie</strong> (69 rue de Seine) — warm room, strong fish menu, easy solo at a small table.</div>
+      </div>
+      <aside class="day-map"><div id="mapWed" class="lmap"></div><div class="maphint">Blue pins = the day's stops · gold dot = hotel.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ THU ============ -->
+  <section class="day" id="thu">
+    <div class="day-head"><span class="num">Day 2</span><h2>August 13</h2><span class="dow">Thursday · Montmartre → Haussmann → 1st/2nd</span></div>
+    <p class="day-summary">Start high in Montmartre for fabric and brocante, drift down through the grands magasins, and finish among the trimming houses near the hotel.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Morning · Montmartre</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://europeforvisitors.com/paris/images/2019/425/montmartre-marche-saint-pierre-showroom-interior-425-0004744.jpg" alt="Marché Saint-Pierre"></div>
+            <div class="body">
+              <h3>Marché Saint-Pierre</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>18th, Anvers</span></div>
+              <p>The Montmartre fabric quarter — you flagged their designer deadstock. Multi-floor Dreyfus plus the coupon shops nearby; go for the special end-of-roll piece, not a full haul.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=March%C3%A9%20Saint-Pierre%202%20rue%20Charles%20Nodier%20Paris" target="_blank">2 rue Charles Nodier</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.paristopten.com/wp-content/uploads/LObjet-qui-Parle.jpg" alt="L'Objet Qui Parle"></div>
+            <div class="body">
+              <h3>L'Objet Qui Parle</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>rue des Martyrs, 18th</span></div>
+              <p>A cabinet-of-curiosities brocante on the way down from Abbesses — small decorative objects to dig through. <strong>Galerie Pénélope</strong> nearby for antique/Deco jewelry.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=L%27Objet%20Qui%20Parle%2086%20rue%20des%20Martyrs%20Paris" target="_blank">86 rue des Martyrs</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Cupola_of_Galeries_Lafayette_Haussmann_Paris_001.jpg/1024px-Cupola_of_Galeries_Lafayette_Haussmann_Paris_001.jpg" alt="Galeries Lafayette dome"></div>
+            <div class="body">
+              <h3>Galeries Lafayette &amp; Printemps <span style="font-weight:400;color:var(--muted);font-size:14px;">(the Right Bank grands magasins)</span></h3>
+              <div class="meta"><span class="pill flex">Open in August</span><span>Bd Haussmann, 9th</span></div>
+              <p>On the way down from Montmartre — the second half of the department-store plan if you don't finish with Sara. Fashion, the dome, the home floors, beauty.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Galeries%20Lafayette%20Haussmann%20Paris" target="_blank">Galeries Lafayette</a> · <a href="https://www.google.com/maps/search/?api=1&query=Printemps%20Haussmann%20Paris" target="_blank">Printemps</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat"><b>Lunch · salad-forward</b> &nbsp;<strong>Rose Bakery</strong> (46 rue des Martyrs) — the vegetable plates, quiches and big salads are exactly your speed, right by L'Objet Qui Parle.</div>
+        <div class="block">
+          <div class="block-head"><span class="pod">Afternoon · 1st / 2nd, near the hotel</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://cdn.sortiraparis.com/images/80/107913/1105808-ultramod-la-plus-ancienne-mercerie-de-paris-image00049.jpg" alt="Ultramod"></div>
+            <div class="body">
+              <h3>Ultramod</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>rue de Choiseul, 2nd</span><span>weekdays</span></div>
+              <p>The 1850 haberdashery — walls of vintage ribbon, grosgrain, and passementerie. Utterly browsable, and the deadstock trim is the real treasure.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Ultramod%203%20rue%20de%20Choiseul%20Paris" target="_blank">3–4 rue de Choiseul</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Paris_passage_du_grand_cerf.jpg/1024px-Paris_passage_du_grand_cerf.jpg" alt="Passage du Grand Cerf"></div>
+            <div class="body">
+              <h3>Passage du Grand Cerf</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>2nd</span></div>
+              <p>A tall, light-filled covered arcade of jewelry, design and decor ateliers — wander the whole length. <strong>The Socialite Family</strong> (rue Saint-Fiacre) for furniture, lighting and decor is a short walk on.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Passage%20du%20Grand%20Cerf%20Paris" target="_blank">Passage du Grand Cerf</a> · <a href="https://www.google.com/maps/search/?api=1&query=The%20Socialite%20Family%20rue%20Saint-Fiacre%20Paris" target="_blank">Socialite Family</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Le_Th%C3%A9%C3%A2tre_%C3%A9ph%C3%A9m%C3%A8re_de_la_Com%C3%A9die_fran%C3%A7aise_%28Palais_royal%29_%286691802889%29.jpg/1024px-Le_Th%C3%A9%C3%A2tre_%C3%A9ph%C3%A9m%C3%A8re_de_la_Com%C3%A9die_fran%C3%A7aise_%28Palais_royal%29_%286691802889%29.jpg" alt="Palais-Royal"></div>
+            <div class="body">
+              <h3>Gabrielle Geppert — Palais-Royal</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>Palais-Royal, 1st</span></div>
+              <p>Vintage designer accessories under the Palais-Royal arcades — and you're back on Papier Royal's doorstep if you want to place the stationery order now.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Gabrielle%20Geppert%20Palais%20Royal%20Paris" target="_blank">Galerie de Montpensier</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat dinner"><b>Dinner · counter scene</b> &nbsp;<strong>Frenchie Bar à Vins</strong> (6 rue du Nil) — no-reservations, buzzy; or <strong>Racines</strong> (Passage des Panoramas) for a quieter Italian-leaning table.</div>
+      </div>
+      <aside class="day-map"><div id="mapThu" class="lmap"></div><div class="maphint">The route runs top (Montmartre) to bottom (Palais-Royal).</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ FRI ============ -->
+  <section class="day" id="fri">
+    <div class="day-head"><span class="num">Day 3</span><h2>August 14</h2><span class="dow">Friday · East side — Marais → 10th → 11th</span></div>
+    <p class="day-summary">The big mixed browse: concept stores, lighting, objects, trims, a design warehouse, and the accessible vintage-home shops — all contiguous, pick as many as you like.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Marais · objects, lighting, trims</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.urbansider.com/wp-content/uploads/Categories/Shopping/Merci-2-@merciparis.jpg" alt="Merci concept store"></div>
+            <div class="body">
+              <h3>Merci</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>Bd Beaumarchais, 3rd</span></div>
+              <p>The concept store — floors of furniture, lighting, textiles and objects, all priced, zero pressure, plus the café-library for a pause. <strong>Fleux</strong> (rue Ste-Croix de la Bretonnerie) is the other big browsable design shop nearby.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Merci%20111%20Boulevard%20Beaumarchais%20Paris" target="_blank">111 Bd Beaumarchais</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.woodenha.com/wp-content/uploads/2017/11/empreintes-paris-poutre-bois-intumescent-1.jpg" alt="Empreintes"></div>
+            <div class="body">
+              <h3>Empreintes</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>rue de Picardie, 3rd</span></div>
+              <p>The Ateliers d'Art de France concept store — ~1,000 French craft pieces across ceramics, glass, lighting, jewelry and objects, with a real range of prices. Best single stop for accessories. <strong>Sentou</strong> (rue François Miron) adds design lighting and objects.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Empreintes%205%20rue%20de%20Picardie%20Paris" target="_blank">5 rue de Picardie</a> · <a href="https://www.google.com/maps/search/?api=1&query=Sentou%20rue%20Fran%C3%A7ois%20Miron%20Paris" target="_blank">Sentou</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media g-ghetto"><div class="ph"><div class="glyph">🎀</div><div class="lbl">Entrée des Fournisseurs</div></div></div>
+            <div class="body">
+              <h3>Entrée des Fournisseurs</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>rue des Francs-Bourgeois, 3rd</span></div>
+              <p>An Aladdin's-cave haberdashery at the back of a courtyard — ribbons, buttons, trims. Open Saturdays too. <strong>Houlès</strong> (rue Saint-Nicolas, toward Bastille) is the passementerie + curtain-hardware house.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Entr%C3%A9e%20des%20Fournisseurs%208%20rue%20des%20Francs-Bourgeois%20Paris" target="_blank">8 rue des Francs-Bourgeois</a> · <a href="https://www.google.com/maps/search/?api=1&query=Houl%C3%A8s%2018%20rue%20Saint-Nicolas%20Paris" target="_blank">Houlès</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media g-mask"><div class="ph"><div class="glyph">👗</div><div class="lbl">Demain Rétro</div></div></div>
+            <div class="body">
+              <h3>Demain Rétro + Haut-Marais fashion</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>Marais, 3rd</span></div>
+              <p>A mixed concept store — vintage fashion, jewelry, and decor in one — plus your Haut-Marais vintage-fashion pins from the family list are all right here (The Broken Arm, At Dawn, and the rest).</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Demain%20R%C3%A9tro%20Marais%20Paris" target="_blank">Demain Rétro</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat"><b>Lunch · market salads &amp; bread</b> &nbsp;<strong>Marché des Enfants Rouges</strong> (39 rue de Bretagne) — Paris's oldest covered market; grab a big salad and good bread from the stalls, right between Merci and Empreintes.</div>
+        <div class="block">
+          <div class="block-head"><span class="pod">Push east · a warehouse + vintage home</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://themediterraneaninsider.com/wp-content/uploads/2026/01/TMI_GalerieParadis_Paris_Ile-de-France_France_02_.jpg" alt="Galerie Paradis"></div>
+            <div class="body">
+              <h3>Galerie Paradis</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>rue de Paradis, 10th</span></div>
+              <p>Your kind of place, not the intimidating kind: a 1,000 m² former ceramics factory of vintage + contemporary design and "popular-art" objects, 70+ makers, eclectic and open to wander. The anti-white-glove gallery.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Galerie%20Paradis%20rue%20de%20Paradis%20Paris" target="_blank">rue de Paradis</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.messynessychic.com/wp-content/uploads/2017/06/belle-lurette-1.jpg" alt="Belle Lurette"></div>
+            <div class="body">
+              <h3>Belle Lurette &amp; Carouche — vintage home (11th)</h3>
+              <div class="meta"><span class="pill flex">Pop-in</span><span>Charonne / Popincourt, 11th</span></div>
+              <p>The "click under gallery" tier: mirrors, lighting, and furniture from the 1890s–70s, restocked weekly, browse-and-leave. Carouche does hunted-and-restored pieces a few streets on.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Belle%20Lurette%205%20rue%20du%20March%C3%A9%20Popincourt%20Paris" target="_blank">5 rue du Marché Popincourt</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat dinner"><b>Dinner · in the current</b> &nbsp;<strong>Septime La Cave</strong> (3 rue Basfroi) for a light standing graze, or <strong>Le Baratin</strong> (Belleville) for a beloved bistro table.</div>
+      </div>
+      <aside class="day-map"><div id="mapFri" class="lmap"></div><div class="maphint">West (Marais) to east (11th) — browse as far as your feet last.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ SAT ============ -->
+  <section class="day" id="sat">
+    <div class="day-head"><span class="num">Day 4</span><h2>August 15</h2><span class="dow">Saturday · The Puces (Assumption — open)</span></div>
+    <p class="day-summary">The high-and-low motherlode, and the un-intimidating way to see gallery-grade design: open market, priced, browse for hours, talk to no one. This is where the French/Deco rugs are.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Puces de Saint-Ouen · go early</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.pucesdeparissaintouen.com/wp-content/uploads/2020/11/pbs1.jpeg" alt="Paul Bert Serpette"></div>
+            <div class="body">
+              <h3>Paul Bert–Serpette</h3>
+              <div class="meta"><span class="pill flex">Open Sat</span><span>rue des Rosiers, Saint-Ouen</span></div>
+              <p>The design heart of the market — Art Deco and 20th-c furniture, lighting, and <strong>French/Deco rugs</strong> (Da Silva Bruhns–style carpets turn up here). <strong>L'Atelier 55</strong> has a stand here too (vintage French &amp; Italian '50s–'80s).</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Marché%20Paul%20Bert%20Serpette%20Saint-Ouen" target="_blank">110 rue des Rosiers</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.parisdiscoveryguide.com/image-files/1200-saint-ouen-brocante-4x3.jpg" alt="Vernaison flea market"></div>
+            <div class="body">
+              <h3>Vernaison</h3>
+              <div class="meta"><span class="pill flex">Open Sat</span><span>Saint-Ouen</span></div>
+              <p>The rambling, atmospheric market — vintage passementerie, trims, hardware, curios, and textiles. The place for the odd, characterful small find.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Marché%20Vernaison%20Saint-Ouen" target="_blank">99 rue des Rosiers</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://www.parisselectbook.com/wp-content/uploads/2023/02/1490091630-2059593395.jpg" alt="Puces market"></div>
+            <div class="body">
+              <h3>Biron</h3>
+              <div class="meta"><span class="pill flex">Open Sat</span><span>Saint-Ouen</span></div>
+              <p>The polished market for finer antiques and estate jewelry — a calmer browse to close the loop.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Marché%20Biron%20Saint-Ouen" target="_blank">85 rue des Rosiers</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="eat"><b>Lunch · on site</b> &nbsp;<strong>Ma Cocotte</strong> (106 rue des Rosiers) — the Starck-designed market brasserie; salads and a proper lunch to refuel between markets.</div>
+        <div class="eat dinner"><b>Dinner · the scene finale</b> &nbsp;<strong>Caviar Kaspia</strong> (17 Place de la Madeleine) — the see-and-be-seen fish-and-caviar room, one of the great tables to sit alone and watch Paris. A fitting last solo night.</div>
+      </div>
+      <aside class="day-map"><div id="mapSat" class="lmap"></div><div class="maphint">The markets cluster on rue des Rosiers, Saint-Ouen (north); Kaspia is back by the hotel.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ FLEX / CULTURE ============ -->
+  <section class="day" id="flex">
+    <div class="day-head"><span class="num">Anytime</span><h2>Culture &amp; the 8th</h2><span class="dow">Open in August · slot into any gap</span></div>
+    <p class="day-summary">Reliable culture (museums stay open in August) plus a cluster in the 8th you can pair with the Kaspia dinner or a quiet morning. Note: Drouot and the Beaux-Arts are on summer recess mid-August — don't build around them.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Worth the detour</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Paris_1er_Mus%C3%A9e_des_Arts_d%C3%A9coratifs_Flacons_461.jpg/1024px-Paris_1er_Mus%C3%A9e_des_Arts_d%C3%A9coratifs_Flacons_461.jpg" alt="Musée des Arts Décoratifs"></div>
+            <div class="body">
+              <h3>Musée des Arts Décoratifs (MAD)</h3>
+              <div class="meta"><span class="pill optional">Open, near hotel</span><span>107 rue de Rivoli, 1st</span></div>
+              <p>Go for the <strong>permanent Art Deco &amp; decorative-arts galleries</strong> — your exact world. (Skip the current temporary show, <em>Royal Thai Dress</em> — not your thing.) Steps from the hotel; ideal for a hot afternoon.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Mus%C3%A9e%20des%20Arts%20D%C3%A9coratifs%20107%20rue%20de%20Rivoli%20Paris" target="_blank">107 rue de Rivoli</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Mus%C3%A9e_Jacquemart_Andr%C3%A9_2007_-_Recoura.jpg/1024px-Mus%C3%A9e_Jacquemart_Andr%C3%A9_2007_-_Recoura.jpg" alt="Musée Jacquemart-André"></div>
+            <div class="body">
+              <h3>Musée Jacquemart-André</h3>
+              <div class="meta"><span class="pill optional">Open daily</span><span>158 Bd Haussmann, 8th</span></div>
+              <p>A Haussmann-era mansion of decorative arts and paintings — gold-leaf ceilings, monumental fireplaces, double-height galleries — freshly reopened after a full restoration. An intimate, deeply collected interior, exactly your world. (In the Marais, <strong>Musée Cognacq-Jay</strong> is the 18th-c-decorative-arts alternative, open Tue–Sun.)</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Mus%C3%A9e%20Jacquemart-Andr%C3%A9%20158%20Boulevard%20Haussmann%20Paris" target="_blank">158 Bd Haussmann</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://bennetongraveur.com/wp-content/uploads/2021/04/BENNETON_ARCH_VTH01hd-scaled-1.jpg" alt="Benneton Graveur"></div>
+            <div class="body">
+              <h3>Benneton Graveur <span style="font-weight:400;color:var(--muted);font-size:14px;">(stationery, grander alt)</span></h3>
+              <div class="meta"><span class="pill book">Order + ship</span><span>75 Bd Malesherbes, 8th</span></div>
+              <p>The other classic engraver since 1880, if you want a second option to Papier Royal — near Jacquemart-André, so pair them. Custom is made-to-order; have it shipped.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Benneton%20Graveur%2075%20Boulevard%20Malesherbes%20Paris" target="_blank">75 Bd Malesherbes</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" referrerpolicy="no-referrer" src="https://artlogic-res.cloudinary.com/w_600,c_limit,f_auto,fl_lossy,q_auto/artlogicstorage/galeriemarcilhac/images/view/eae6072847825cabb3090d89fe1e4c99j/galeriemarcilhac-andre-groult-sofa-c.-1920.jpg" alt="Galerie Marcilhac Art Deco"></div>
+            <div class="body">
+              <h3>Galerie Marcilhac <span style="font-weight:400;color:var(--muted);font-size:14px;">(Deco reference — window only)</span></h3>
+              <div class="meta"><span class="pill optional">Inspiration</span><span>rue du Fbg Saint-Honoré, 8th</span></div>
+              <p>The Art Deco reference gallery (Da Silva Bruhns, the great ensembliers). It's a proper high-end gallery, so treat it as a window/inspiration stop, not a casual buy — and it may be closed mid-August. Worth a look if you're passing to Kaspia.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Galerie%20Marcilhac%20120%20rue%20du%20Faubourg%20Saint-Honor%C3%A9%20Paris" target="_blank">120 rue du Fbg Saint-Honoré</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="day-map"><div id="mapEight" class="lmap"></div><div class="maphint">The 8th cluster + MAD — all pairs with the Madeleine dinner.</div></aside>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div>Paris — solo design days, Aug 11–16. Everything walk-in unless noted; French/Deco rugs only; no appointments.</div>
+  <div class="updated">Draft · maps live in a browser · a few small shops take August holidays — a quick call ahead never hurts</div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  var HOTEL = [48.8688, 2.3312];
+  function buildMap(id, pts){
+    try{
+      var el = document.getElementById(id); if(!el) return;
+      var map = L.map(id, {scrollWheelZoom:false});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+      var group = [];
+      L.circleMarker(HOTEL, {radius:6, color:'#b08a3e', fillColor:'#b08a3e', fillOpacity:1})
+        .bindPopup('<b>Park Hyatt</b> (hotel)').addTo(map);
+      group.push(HOTEL);
+      pts.forEach(function(p){
+        L.marker([p[0], p[1]]).bindPopup('<b>'+p[2]+'</b>').addTo(map);
+        group.push([p[0], p[1]]);
+      });
+      map.fitBounds(group, {padding:[34,34]});
+    }catch(e){}
+  }
+  window.addEventListener('load', function(){
+    buildMap('mapTue', [
+      [48.86485,2.33842,'Papier Royal'],
+      [48.86399,2.33374,'Astier de Villatte'],
+      [48.86282,2.34022,'Galerie du Passage (Véro-Dodat)'],
+      [48.86317,2.33295,'Musée des Arts Décoratifs'],
+      [48.86634,2.33829,"Willi's Wine Bar (dinner)"],
+      [48.86627,2.3371,'Juveniles (dinner)']
+    ]);
+    buildMap('mapWed', [
+      [48.85646,2.3264,'Deyrolle — 46 rue du Bac'],
+      [48.84927,2.35539,'La Quincaillerie'],
+      [48.85745,2.33639,'Rue de Seine galleries'],
+      [48.85831,2.32955,'Carré Rive Gauche'],
+      [48.85739,2.33523,'Preclothed (vintage fashion)'],
+      [48.85104,2.32413,'Le Bon Marché'],
+      [48.85002,2.32695,'Cuisine de Bar / Poilâne (lunch)'],
+      [48.85398,2.33702,'Le Bar du Marché (lunch)'],
+      [48.85422,2.33699,'La Boissonnerie (dinner)']
+    ]);
+    buildMap('mapThu', [
+      [48.88463,2.34495,'Marché Saint-Pierre'],
+      [48.88334,2.33979,"L'Objet Qui Parle"],
+      [48.88271,2.33821,'Galerie Pénélope (jewelry)'],
+      [48.87939,2.3401,'Rose Bakery (lunch)'],
+      [48.87372,2.33165,'Galeries Lafayette'],
+      [48.87389,2.32905,'Printemps'],
+      [48.86917,2.33588,'Ultramod (trims)'],
+      [48.86467,2.35012,'Passage du Grand Cerf'],
+      [48.87012,2.34556,'The Socialite Family'],
+      [48.86514,2.33718,'Gabrielle Geppert'],
+      [48.86784,2.34802,'Frenchie Bar à Vins (dinner)'],
+      [48.87126,2.34175,'Racines (dinner)']
+    ]);
+    buildMap('mapFri', [
+      [48.86072,2.36703,'Merci'],
+      [48.86334,2.36219,'Empreintes'],
+      [48.85878,2.3542,'Fleux'],
+      [48.85557,2.358,'Sentou'],
+      [48.85671,2.36358,'Entrée des Fournisseurs'],
+      [48.85089,2.37446,'Houlès (passementerie)'],
+      [48.86279,2.36198,'Marché des Enfants Rouges (lunch)'],
+      [48.87555,2.34957,'Galerie Paradis (10th)'],
+      [48.86408,2.37361,'Belle Lurette (vintage home)'],
+      [48.85403,2.3825,'Carouche'],
+      [48.85371,2.38021,'Septime La Cave (dinner)']
+    ]);
+    buildMap('mapSat', [
+      [48.9037,2.33949,'Paul Bert–Serpette'],
+      [48.90222,2.34248,'Vernaison'],
+      [48.90268,2.34166,'Biron'],
+      [48.90374,2.33932,'Ma Cocotte (lunch)'],
+      [48.8706,2.32387,'Caviar Kaspia (dinner)']
+    ]);
+    buildMap('mapEight', [
+      [48.86317,2.33295,'Musée des Arts Décoratifs'],
+      [48.87527,2.31060,'Musée Jacquemart-André'],
+      [48.87712,2.31681,'Benneton Graveur'],
+      [48.87199,2.3137,'Galerie Marcilhac'],
+      [48.8706,2.32387,'Caviar Kaspia']
+    ]);
+  });
+</script>
+</body>
+</html>
